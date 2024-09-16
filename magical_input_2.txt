@@ -1,0 +1,8 @@
+2
+1 Plutonium 2
+1 Plutonium 45
+Plutonium 5
+5
+1 1 1 1 2
+1
+2 2 Plutonium 50

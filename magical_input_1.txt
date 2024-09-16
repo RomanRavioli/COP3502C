@@ -1,0 +1,11 @@
+2
+2 QuickSilver 1 Resin 1
+2 Resin 1 GraveDust 5
+QuickSilver 1 Resin 10 GraveDust 100
+3
+1 2 1
+4
+1 Resin 5
+1 Resin 20
+2 2 GraveDust 10
+2 1 QuickSilver 4
