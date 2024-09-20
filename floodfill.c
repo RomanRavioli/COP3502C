@@ -1,97 +1,106 @@
-// This program demonstrates,
-//  * How to make a circular linked list
-//  * How to implement a Queue using a circular linked list
-//  * How to use a dx/dy array for grid problems
-//  * How to flood fill from a single point using a queue
-
 #include <stdio.h>
 #include <stdlib.h>
 
+// Define structures for Node and Queue
 typedef struct Node Node;
 typedef struct Queue Queue;
 
-// Circular linked list
+// Circular linked list node structure
 struct Node {
-  int value;
-  Node *next;
+  int value;        // stores the value for each node
+  Node *next;       // pointer to the next node in the circular linked list
 };
 
+// Queue structure, implemented using a circular linked list
 struct Queue {
-  Node *tail; // circular linked list
+  Node *tail;       // pointer to the tail node of the circular linked list
 };
 
-// Linked List Prototypes
-Node *createNode(int value);
-Node *addTail(Node *tail, int value);
-Node *removeHead(Node *tail);
+// Function prototypes for the linked list
+Node *createNode(int value);     // Create a new node
+Node *addTail(Node *tail, int value);  // Add a node to the tail of the circular list
+Node *removeHead(Node *tail);    // Remove the head node from the circular list
 
-// Queue Prototypes
-void enqueue(Queue *q, int value);
-void dequeue(Queue *q);
-int front(Queue *q);
+// Function prototypes for queue operations
+void enqueue(Queue *q, int value);  // Add an element to the queue
+void dequeue(Queue *q);             // Remove an element from the queue
+int front(Queue *q);                // Get the front element from the queue
 
 // Linked List Functions
-// Function to create a node
+
+// Function to create a new node with a given value
 Node *createNode(int value) {
-  Node *res = (Node *)malloc(sizeof(Node));
-  res->value = value;
-  res->next = res; // circular
-  return res;
+  Node *res = (Node *)malloc(sizeof(Node));  // Allocate memory for a new node
+  res->value = value;        // Set the node's value
+  res->next = res;           // Set the next pointer to itself (circular list with one node)
+  return res;                // Return the newly created node
 }
-// Return the resulting tail of the linked list
+
+// Function to add a node with a given value to the tail of the circular list
 Node *addTail(Node *tail, int value) {
-  Node *newTail = createNode(value);
+  Node *newTail = createNode(value);  // Create a new node
 
-  // 0 node check
+  // Check if the list is empty (0 nodes)
   if (tail == NULL)
-    return newTail;
+    return newTail;         // If empty, the new node becomes the tail
 
-  newTail->next = tail->next; // Point to head
-  tail->next = newTail;       // The new tail comes after
-  return newTail;             // Return resulting tail
+  newTail->next = tail->next; // Set the new node's next pointer to the head of the list
+  tail->next = newTail;       // Set the current tail's next to the new node (new tail)
+  return newTail;             // Return the new tail of the list
 }
 
-// Function that removes the head of a circular linked list
-// Returns the tail
+// Function to remove the head of the circular linked list
+// This keeps the circular nature intact while removing the first element
 Node *removeHead(Node *tail) {
-  // 0 node check
+  // Check if the list is empty (0 nodes)
   if (tail == NULL)
-    return NULL; // list is empty
-  // 1 node check
+    return NULL;           // Return NULL since there's nothing to remove
+
+  // Check if the list has only one node
   if (tail == tail->next) {
-    free(tail);
-    return NULL;
+    free(tail);            // Free the memory of the single node
+    return NULL;           // The list becomes empty
   }
-  Node *head = tail->next;
-  tail->next = head->next; // cuts the head out of list
-  free(head);              // remove excess memory
-  return tail;             // Return the resulting tail
+
+  // If there are more than one node, remove the head
+  Node *head = tail->next;    // Head is the node next to the tail
+  tail->next = head->next;    // Tail now points to the new head (second node)
+  free(head);                 // Free the memory of the old head
+  return tail;                // Return the updated tail
 }
 
 // Queue Functions
+
+// Function to add an element to the queue
+// This is done by adding a new element to the tail of the circular linked list
 void enqueue(Queue *q, int value) { 
-  q->tail = addTail(q->tail, value); 
-}
-void dequeue(Queue *q) { 
-  q->tail = removeHead(q->tail); 
-}
-int front(Queue *q) {
-  Node *head = q->tail->next;
-  return head->value;
+  q->tail = addTail(q->tail, value);  // Add the new element to the queue's tail
 }
 
-// The dimensions of the grid
+// Function to remove an element from the queue (dequeue)
+// This is done by removing the head of the circular linked list
+void dequeue(Queue *q) { 
+  q->tail = removeHead(q->tail);  // Remove the head of the circular list (first element)
+}
+
+// Function to return the front element of the queue (the head of the list)
+int front(Queue *q) {
+  Node *head = q->tail->next;   // The front element is the node next to the tail (head)
+  return head->value;           // Return the value of the front element
+}
+
+// Constants to define the grid dimensions (rows and columns)
 #define COL 5
 #define ROW 6
 
-// Store the differenct movement directions as an array of
-// x and y changes
+// Arrays representing the 8 possible movement directions in a grid
+// dx and dy represent the changes in the x (column) and y (row) coordinates
 int dx[8] = {0, 1, 1, 1, 0, -1, -1, -1};
 int dy[8] = {1, 1, 0, -1, -1, -1, 0, 1};
 
-// The entry point of the program
+// Main function to run the flood fill algorithm
 int main() {
-  // Hard code a grid
+  // Hardcoded grid to represent obstacles ('x') and free spaces (' ')
   char map[ROW][COL + 1] = {
     " x x ", 
     "xxxx ", 
@@ -101,80 +110,93 @@ int main() {
     "  x  "
   };
 
-  // Start location
+  // Starting location (row 0, column 4)
   int r1 = 0;
   int c1 = 4;
 
-  // End location
+  // Target location to check if it gets flooded (row 0, column 0)
   int r2 = 0;
   int c2 = 0;
 
-  // Make an empty queue
+  // Initialize an empty queue
   Queue q;
   q.tail = NULL;
 
-  // Track visited areas
+  // Create a 2D array to track visited cells
   int visited[ROW][COL];
+  // Initialize all cells as not visited (0)
   for (int i = 0; i < ROW; i++) {
     for (int j = 0; j < COL; j++) {
       visited[i][j] = 0;
     }
   }
 
-  // Set the initial flooding point of the queue
-  enqueue(&q, r1);
-  enqueue(&q, c1);
+  // Enqueue the starting location (row 1, column 4)
+  enqueue(&q, r1);  // Enqueue row
+  enqueue(&q, c1);  // Enqueue column
 
-  // Visit the starting location
+  // Mark the starting location as visited
   visited[r1][c1] = 1;
 
-  // Remove locations from the queue until empty
+  // Loop until the queue is empty (no more locations to process)
   while (q.tail != NULL) {
-    // Get a current location
-    int curRow = front(&q);
-    dequeue(&q);
-    int curCol = front(&q);
-    dequeue(&q);
+    // Dequeue the current row and column
+    int curRow = front(&q);  // Get the current row
+    dequeue(&q);             // Remove it from the queue
+    int curCol = front(&q);  // Get the current column
+    dequeue(&q);             // Remove it from the queue
 
+    // Try all 8 possible movement directions from the current location
     for (int dir = 0; dir < 8; dir++) {
-      // Find the location to flood from our current position
+      // Calculate the next row and column based on the current direction
       int nxtRow = curRow + dy[dir];
       int nxtCol = curCol + dx[dir];
 
-      // Can we flood here pleas?
-      if (nxtRow >= ROW)
-        continue; // you bad
-      if (nxtCol >= COL)
-        continue; // you bad
-      if (nxtCol < 0)
-        continue; // you bad
-      if (nxtRow < 0)
-        continue; // you bad
+      // Boundary checks to ensure the next position is within the grid
+      if (nxtRow >= ROW || nxtRow < 0 || nxtCol >= COL || nxtCol < 0)
+        continue;  // If out of bounds, skip this direction
 
-      // Is this blocked
-      if (map[nxtRow][nxtCol] == 'x')
-        continue;
+      // Check if the next cell is blocked ('x') or already visited
+      if (map[nxtRow][nxtCol] == 'x' || visited[nxtRow][nxtCol])
+        continue;  // Skip blocked or visited cells
 
-      // IS this location previously visited
-      if (visited[nxtRow][nxtCol])
-        continue;
-
-      // We have a valid location
+      // Mark the new location as visited
       visited[nxtRow][nxtCol] = 1;
 
-      // Add to queue
+      // Enqueue the valid next location
       enqueue(&q, nxtRow);
       enqueue(&q, nxtCol);
     }
   }
 
-  // Check if point 2 was visited
+  // Check if the target location (r2, c2) was flooded
   if (visited[r2][c2]) {
-    printf("FLOODED!!!\n");
+    printf("FLOODED!!!\n");  // If visited, it was flooded
   } else {
-    printf("Safe!\n");
+    printf("Safe!\n");       // Otherwise, it's safe
   }
 
-  // Exit the program
-  return 0;
+  return 0;  // End the program
 }
+/*
+Explanation:
+
+	1.	Circular Linked List:
+	•	This part of the program demonstrates how to create a circular linked list, where the last node points back to the first, forming a loop.
+	•	Important functions include:
+	•	createNode: Creates a new node.
+	•	addTail: Adds a node to the end of the list (updating the tail).
+	•	removeHead: Removes the head node from the list while keeping it circular.
+	2.	Queue Implementation:
+	•	The program implements a queue using the circular linked list. A queue is a data structure where elements are added to the rear (enqueue) and removed from the front (dequeue).
+	•	Functions like enqueue, dequeue, and front are provided to manage the queue.
+	3.	dx/dy Arrays:
+	•	These arrays are used to represent the 8 possible directions of movement in a grid. Each pair of dx[i] and dy[i] gives the change in row and column for that direction.
+	4.	Flood Fill Algorithm:
+	•	The flood fill algorithm starts at a specific point and spreads to all neighboring open cells, simulating the process of filling a connected area.
+	•	The queue is used to manage which cells to process next. When a new cell is “visited,” it is marked, and its neighbors are added to the queue.
+	•	This algorithm is important in grid-based problems such as pathfinding or filling areas in images.
+	5.	Grid and Obstacles:
+	•	The grid is represented as a 2D array where 'x' represents obstacles that block the flood from spreading.
+	•	The algorithm checks whether a specific target location gets flooded, demonstrating how the flood fill spreads across a grid.
+*/
