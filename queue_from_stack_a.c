@@ -16,10 +16,17 @@ struct Queue {
     struct Stack stk;
 };
 
-int ops = 0; // Global variable to count operations
-
 // Queue Functions
 // n-1 + 8*(n-1) - 1 + 8*(n-2) - 1 .. + 7 = 4*n*(n+1) = 4*10*11 = 440
+
+// If we have n elements in the stack, 4+n+3
+// One flip: n pops + n pushes + 2n+1 -> 
+
+// Top of the stack represents the front of the queue
+
+// 3 + 11 + 19 + .. + 8n-5 = 4n^2 = 4*10*10 = 400
+
+int ops = 0; // Global variable to count operations
 
 void push(struct Stack* s, int value) {
     struct Node* newNode = (struct Node*)malloc(sizeof(struct Node));
@@ -58,25 +65,21 @@ void flip(struct Stack* dest, struct Stack* src) {
     ops++; // Count flip as one operation
 }
 
+// Queue functions
 void enqueue(struct Queue* que, int value) {
+    struct Stack tmp;
+    tmp.head = NULL;
+    flip(&tmp, &(que->stk));
     push(&(que->stk), value);
+    flip(&(que->stk), &tmp);
 }
 
 void dequeue(struct Queue* que) {
-    struct Stack tmp;
-    tmp.head = NULL;
-    flip(&tmp, &(que->stk));
-    pop(&tmp);
-    flip(&(que->stk), &tmp);
+    pop(&(que->stk));
 }
 
 int front(struct Queue* que) {
-    struct Stack tmp;
-    tmp.head = NULL;
-    flip(&tmp, &(que->stk));
-    int res = top(&tmp);
-    flip(&(que->stk), &tmp);
-    return res;
+    return top(&(que->stk));
 }
 
 // The main function
@@ -96,11 +99,9 @@ int main() {
     for(int i = 0; i < 10; i++) {
         int before = ops;
         int value = front(&q);
-        printf("Front: %d, Operations: %d\n", value, ops - before);
-        
-        before = ops;
         dequeue(&q);
-        printf("Dequeued, Operations: %d\n", ops - before);
+        int after = ops;
+        printf("Dequeued: %d, Operations: %d\n", value, after - before);
     }
 
     printf("Total operations: %d\n", ops);
