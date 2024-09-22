@@ -1,137 +1,188 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MAX 2000  // Maximum grid size
+#define inscription 2000
 
-int R, C;  // Dimensions of the grid
-char grid[MAX][MAX + 1];  // Grid to store the inscription
-int region[MAX][MAX];  // To mark regions by flood fill
-int region_size[MAX * MAX];  // To store the size of each region
-int region_count = 0;  // Total number of regions
-int dx[4] = {0, 1, 0, -1};  // x direction for 4 possible moves (right, down, left, up)
-int dy[4] = {1, 0, -1, 0};  // y direction for 4 possible moves (right, down, left, up)
+// Structure of a grid where a point will be
+typedef struct {
+    int row;
+    int col;
+} Point;
 
-// Function to check if a point is within the grid
-int in_bounds(int x, int y) {
-    return x >= 0 && x < R && y >= 0 && y < C;
-}
+// Structure for a queue
+typedef struct {
+    Point * items;
+    int front;
+    int rear;
+    int size;
+} Queue;
 
-// Flood fill to identify regions of connected free points
-void flood_fill(int x, int y) {
-    // Create a queue for flood fill
-    int queue[MAX * MAX][2];
-    int front = 0, back = 0;
+// Variable declarations
+char grid[inscription][inscription];
+int rows, columns;
+int neighbor[inscription][inscription];
+int neighbor_size[inscription * inscription];
+int neighbor_count = 0;
 
-    queue[back][0] = x;
-    queue[back++][1] = y;
+// Allows us to move up, down, left, right
+int adjacentRow[] = {-1, 1, 0, 0};
+int adjacentColumn[] = {0, 0, -1, 1};
 
-    region[x][y] = region_count;
-    region_size[region_count]++;
-
-    // Process the queue
-    while (front < back) {
-        int curX = queue[front][0];
-        int curY = queue[front++][1];
-
-        // Explore 4 possible directions (up, down, left, right)
-        for (int dir = 0; dir < 4; dir++) {
-            int nx = curX + dx[dir];
-            int ny = curY + dy[dir];
-
-            // If the neighbor is in bounds and is a free point that hasn't been visited
-            if (in_bounds(nx, ny) && grid[nx][ny] == '.' && region[nx][ny] == -1) {
-                region[nx][ny] = region_count;
-                region_size[region_count]++;
-                queue[back][0] = nx;
-                queue[back++][1] = ny;
-            }
-        }
-    }
-}
-
-// Function to calculate the magic flow for a region size
-long long calculate_magic(int n) {
-    return (long long)n * (n + 1) / 2;  // Formula: n(n + 1) / 2
-}
+// My function prototypes
+Queue * createQueue(int capacity);
+void enqueue(Queue * que, Point p);
+Point dequeue(Queue * que);
+int isEmpty(Queue* que);
+void freeQueue(Queue * que);
+void floodFill(int start_row, int start_col);
+long long calculatePairs(int n);
+long long findMaxMagic();
 
 int main() {
-    // Read the grid dimensions
-    scanf("%d %d", &R, &C);
+    // Gets user input
+    scanf("%d %d", &rows, &columns);
 
-    // Read the grid itself
-    for (int i = 0; i < R; i++) {
+    for (int i = 0; i < rows; i++) {
         scanf("%s", grid[i]);
     }
 
-    // Initialize the region array with -1 (unvisited)
-    for (int i = 0; i < R; i++) {
-        for (int j = 0; j < C; j++) {
-            region[i][j] = -1;
+    for (int i = 0; i < inscription; i++) {
+        for (int j = 0; j < inscription; j++) {
+            neighbor[i][j] = -1;
         }
     }
 
-    // Flood fill to identify connected regions of free points ('.')
-    for (int i = 0; i < R; i++) {
-        for (int j = 0; j < C; j++) {
-            if (grid[i][j] == '.' && region[i][j] == -1) {
-                flood_fill(i, j);
-                region_count++;
+    // Does flood fill for every free point
+    for (int currentRow = 0; currentRow < rows; currentRow++) {
+        for (int currentColumn = 0; currentColumn < columns; currentColumn++) {
+            if (grid[currentRow][currentColumn] == '.' && neighbor[currentRow][currentColumn] == -1) {
+                floodFill(currentRow, currentColumn);
             }
         }
     }
 
-    // Calculate the total initial magic flow
-    long long total_magic = 0;
-    for (int i = 0; i < region_count; i++) {
-        total_magic += calculate_magic(region_size[i]);
+    // Finds the max magic then prints the result
+    long long max_magic = findMaxMagic();
+    printf("%lld\n", max_magic);
+
+    return 0;
+}
+
+// Queue functions; create queue, enqueue, dequeue
+Queue * createQueue(int capacity) {
+    Queue * que = (Queue*)malloc(sizeof(Queue));
+    que->items = (Point*)malloc(capacity * sizeof(Point));
+    que->front = 0;
+    que->rear = -1;
+    que->size = 0;
+    return que;
+}
+
+void enqueue(Queue * que, Point p) {
+    que->rear = (que->rear + 1) % (rows * columns);
+    que->items[que->rear] = p;
+    que->size++;
+}
+
+Point dequeue(Queue * que) {
+    Point p = que->items[que->front];
+    que->front = (que->front + 1) % (rows * columns);
+    que->size--;
+    return p;
+}
+
+// Makes sure queue is empty
+int isEmpty(Queue* que) {
+    return que->size == 0;
+}
+
+// Frees memory
+void freeQueue(Queue * que) {
+    free(que->items);
+    free(que);
+}
+
+// Finds the connected points where magic can flow
+void floodFill(int start_row, int start_col) {
+    Queue* que = createQueue(rows * columns);
+    Point start = {start_row, start_col};
+    enqueue(que, start);
+
+    neighbor[start_row][start_col] = neighbor_count;
+    neighbor_size[neighbor_count] = 1;
+
+    while (!isEmpty(que)) {
+        Point current = dequeue(que);
+        int currentRow = current.row;
+        int currentColumn = current.col;
+
+        // Checks up, down, left, right
+        for (int i = 0; i < 4; i++) {
+            int newRow = currentRow + adjacentRow[i];
+            int newColumn = currentColumn + adjacentColumn[i];
+
+            // Checks if adjacent cell is a free point or not
+            if (newRow >= 0 && newRow < rows && newColumn >= 0 && newColumn < columns &&
+                grid[newRow][newColumn] == '.' && neighbor[newRow][newColumn] == -1) {
+                neighbor[newRow][newColumn] = neighbor_count;
+                neighbor_size[neighbor_count]++;
+                Point next = {newRow, newColumn};
+                enqueue(que, next);
+            }
+        }
     }
 
-    // Now check each potential failure point ('X')
-    long long max_magic = total_magic;
-    for (int i = 0; i < R; i++) {
-        for (int j = 0; j < C; j++) {
-            if (grid[i][j] == 'X') {
-                // We're testing a failure at this point (turn 'X' into '.')
+    neighbor_count++;
+    freeQueue(que);
+}
 
-                // Set to store unique regions adjacent to this 'X'
-                int adjacent_regions[4] = {-1, -1, -1, -1};
-                int new_region_size = 1;  // The point itself becomes a new free point
+// Checks the pairs in a group of points
+long long calculatePairs(int n) {
+    return (long long) n * (n + 1) / 2;
+}
 
-                for (int dir = 0; dir < 4; dir++) {
-                    int ni = i + dx[dir];
-                    int nj = j + dy[dir];
+// Finds max magic that can be generated by one failure
+long long findMaxMagic() {
+    long long max_magic = 0;
+    long long current_magic = 0;
 
-                    if (in_bounds(ni, nj) && grid[ni][nj] == '.' && region[ni][nj] != -1) {
-                        int r = region[ni][nj];
-                        int already_seen = 0;
-                        for (int k = 0; k < 4; k++) {
-                            if (adjacent_regions[k] == r) {
-                                already_seen = 1;
+    // Calculates the starting magic
+    for (int i = 0; i < neighbor_count; i++) {
+        current_magic += calculatePairs(neighbor_size[i]);
+    }
+
+    // Checks each failure point
+    for (int currentRow = 0; currentRow < rows; currentRow++) {
+        for (int currentColumn = 0; currentColumn < columns; currentColumn++) {
+            if (grid[currentRow][currentColumn] == 'X') {
+                long long new_magic = current_magic;
+                int neighboring_area[4] = {0};
+                int neighbor_count = 0;
+                int total_size = 1;
+
+                // Checks the neighboring points
+                for (int i = 0; i < 4; i++) {
+                    int newRow = currentRow + adjacentRow[i];
+                    int newColumn = currentColumn + adjacentColumn[i];
+                    if (newRow >= 0 && newRow < rows && newColumn >= 0 && newColumn < columns && grid[newRow][newColumn] == '.') {
+                        int reg = neighbor[newRow][newColumn];
+                        int new_neighbor = 1;
+                        for (int j = 0; j < neighbor_count; j++) {
+                            if (neighboring_area[j] == reg) {
+                                new_neighbor = 0;
                                 break;
                             }
                         }
-                        if (!already_seen) {
-                            // Add this region's size to the new region size
-                            new_region_size += region_size[r];
-                            adjacent_regions[dir] = r;  // Mark this region as seen
+                        if (new_neighbor) {
+                            neighboring_area[neighbor_count++] = reg;
+                            new_magic -= calculatePairs(neighbor_size[reg]);
+                            total_size += neighbor_size[reg];
                         }
                     }
                 }
 
-                // Calculate the new total magic flow after failure at (i, j)
-                long long new_magic = total_magic;
+                new_magic += calculatePairs(total_size);
 
-                // Subtract magic of the regions we are merging
-                for (int k = 0; k < 4; k++) {
-                    if (adjacent_regions[k] != -1) {
-                        new_magic -= calculate_magic(region_size[adjacent_regions[k]]);
-                    }
-                }
-
-                // Add the new region's magic
-                new_magic += calculate_magic(new_region_size);
-
-                // Update the maximum magic flow found
                 if (new_magic > max_magic) {
                     max_magic = new_magic;
                 }
@@ -139,8 +190,5 @@ int main() {
         }
     }
 
-    // Output the maximum magic flow
-    printf("%lld\n", max_magic);
-
-    return 0;
+    return max_magic;
 }
