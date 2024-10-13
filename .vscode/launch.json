@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "/Users/romantmanuel/Library/CloudStorage/OneDrive-UniversityofCentralFlorida/Desktop/COP 3502C/COP3502C",
+      "program": "/Users/romantmanuel/Library/CloudStorage/OneDrive-UniversityofCentralFlorida/Desktop/COP 3502C/COP3502C/build/Debug/outDebug"
+    }
+  ]
+}
