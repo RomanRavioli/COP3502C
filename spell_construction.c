@@ -39,7 +39,7 @@ int main()
     finder(start, 0);
 
     // Prints the shortest and best
-    printf("%s", shortest);
+    printf("%s\n", shortest);
     return 0;
 }
 
