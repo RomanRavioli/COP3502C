@@ -2,92 +2,118 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_LINE_LENGTH 1024
-#define OUTPUT_WIDTH 80
+#define MAX_LINE_LENGTH 80
 
-// Function to calculate checksum based on specified bit size
-unsigned long calculate_checksum(const char *text, int length, int bit_size) {
-    unsigned long checksum = 0;
-    int padding = 0;
-    
-    // Calculate padding needed based on bit size
-    if (bit_size == 16) {
-        padding = length % 2;
-    } else if (bit_size == 32) {
-        padding = (4 - (length % 4)) % 4;
-    }
-    
-    // Process each character
+void printFormattedInput(const char *text, int length) {
     for (int i = 0; i < length; i++) {
-        checksum += (unsigned char)text[i];
+        printf("%c", text[i]);
+        if ((i + 1) % MAX_LINE_LENGTH == 0) {
+            printf("\n");
+        }
+    }
+    if (length % MAX_LINE_LENGTH != 0) {
+        printf("\n");
+    }
+}
+
+unsigned long calculateChecksum(const char *text, int length, int checksumSize) {
+    unsigned long checksum = 0;
+    int paddingNeeded = 0;
+    
+    // Calculate padding needed
+    if (checksumSize == 16) {
+        paddingNeeded = (length % 2) ? 1 : 0;
+    } else if (checksumSize == 32) {
+        paddingNeeded = (4 - (length % 4)) % 4;
     }
     
-    // Add padding X's if needed
-    for (int i = 0; i < padding; i++) {
-        checksum += 'X';
+    // Process text byte by byte
+    for (int i = 0; i < length; i++) {
+        if (checksumSize == 8) {
+            checksum = (checksum + (unsigned char)text[i]) & 0xFF;
+        } else if (checksumSize == 16) {
+            checksum = (checksum << 8) | (unsigned char)text[i];
+            if (i % 2 == 1) {
+                checksum = checksum & 0xFFFF;
+            }
+        } else if (checksumSize == 32) {
+            checksum = (checksum << 8) | (unsigned char)text[i];
+            if (i % 4 == 3) {
+                checksum = checksum & 0xFFFFFFFF;
+            }
+        }
     }
     
-    // Mask the checksum based on bit size
-    if (bit_size == 8) {
-        checksum &= 0xFF;
-    } else if (bit_size == 16) {
-        checksum &= 0xFFFF;
-    } else if (bit_size == 32) {
-        checksum &= 0xFFFFFFFF;
+    // Handle padding
+    for (int i = 0; i < paddingNeeded; i++) {
+        if (checksumSize == 16) {
+            checksum = (checksum << 8) | 'X';
+            if ((length + i) % 2 == 1) {
+                checksum = checksum & 0xFFFF;
+            }
+        } else if (checksumSize == 32) {
+            checksum = (checksum << 8) | 'X';
+            if ((length + i) % 4 == 3) {
+                checksum = checksum & 0xFFFFFFFF;
+            }
+        }
+    }
+    
+    // Final masking
+    if (checksumSize == 8) {
+        checksum = checksum & 0xFF;
+    } else if (checksumSize == 16) {
+        checksum = checksum & 0xFFFF;
+    } else if (checksumSize == 32) {
+        checksum = checksum & 0xFFFFFFFF;
     }
     
     return checksum;
 }
 
 int main(int argc, char *argv[]) {
-    // Check command line arguments
     if (argc != 3) {
         fprintf(stderr, "Usage: %s <input_file> <checksum_size>\n", argv[0]);
         return 1;
     }
     
-    // Parse checksum size
-    int checksum_size = atoi(argv[2]);
-    if (checksum_size != 8 && checksum_size != 16 && checksum_size != 32) {
+    int checksumSize = atoi(argv[2]);
+    if (checksumSize != 8 && checksumSize != 16 && checksumSize != 32) {
         fprintf(stderr, "Valid checksum sizes are 8, 16, or 32\n");
         return 1;
     }
     
-    // Open input file
     FILE *file = fopen(argv[1], "r");
     if (!file) {
         fprintf(stderr, "Error opening file: %s\n", argv[1]);
         return 1;
     }
     
-    // Read file content
-    char content[MAX_LINE_LENGTH] = {0};
-    int total_chars = 0;
+    char *buffer = NULL;
+    size_t bufferSize = 0;
+    int characterCnt = 0;
     int c;
     
-    while ((c = fgetc(file)) != EOF && total_chars < MAX_LINE_LENGTH - 1) {
-        content[total_chars++] = (char)c;
-        
-        // Print characters in 80-character lines
-        if (total_chars % OUTPUT_WIDTH == 0) {
-            content[total_chars] = '\0';
-            printf("%s", content);
-            memset(content, 0, MAX_LINE_LENGTH);
-            total_chars = 0;
+    while ((c = fgetc(file)) != EOF) {
+        if (characterCnt >= bufferSize) {
+            bufferSize = bufferSize ? bufferSize * 2 : 1024;
+            buffer = realloc(buffer, bufferSize);
+            if (!buffer) {
+                fprintf(stderr, "Memory allocation failed\n");
+                fclose(file);
+                return 1;
+            }
         }
+        buffer[characterCnt++] = (char)c;
     }
-    
-    // Print remaining characters if any
-    if (total_chars > 0) {
-        content[total_chars] = '\0';
-        printf("%s", content);
-    }
-    
-    // Calculate and print checksum
-    unsigned long checksum = calculate_checksum(content, total_chars, checksum_size);
-    printf("%2d bit checksum is %8lx for all %4d chars\n", 
-           checksum_size, checksum, total_chars);
     
     fclose(file);
+    printFormattedInput(buffer, characterCnt);
+    
+    unsigned long checksum = calculateChecksum(buffer, characterCnt, checksumSize);
+    printf("%2d bit checksum is %8lx for all %4d chars\n", 
+           checksumSize, checksum, characterCnt);
+    
+    free(buffer);
     return 0;
 }
